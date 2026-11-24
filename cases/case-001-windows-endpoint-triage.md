@@ -356,3 +356,107 @@ No suspicious configuration discrepancy was identified within the examined prope
 - The investigation covered selected service properties and one configured service DLL; it does not represent a complete Windows persistence assessment.
 
 
+## Service Control Manager Event Analysis (Event ID 7040)
+
+### Objective
+
+To examine Windows Service Control Manager (SCM) events for service startup configuration changes and assess whether the observed activity requires further investigation.
+
+### 1. Event Collection
+
+Queried the Windows System event log for the following event IDs:
+
+- **7036:** Service entered a running or stopped state.
+- **7040:** Service startup type was changed.
+- **7045:** A new service was installed.
+
+The query returned multiple Event ID 7040 records involving:
+
+- Background Intelligent Transfer Service (BITS)
+- Windows Modules Installer (TrustedInstaller)
+- IsolationSession
+
+Repeated startup-type changes were observed across the collected records.
+
+### 2. Event 7040 Analysis
+
+A representative Event ID 7040 record was examined in XML format.
+
+**Observed event details:**
+
+- Provider: Service Control Manager
+- Event ID: 7040
+- Event level: Information
+- Service: IsolationSession
+- Previous startup type: Automatic
+- New startup type: Demand Start
+- Timestamp: 24 November 2026, 19:03:28 IST
+- Event record ID: 140679
+- Security context: LocalSystem (S-1-5-18)
+
+The event confirms that the startup configuration of the identified service changed from Automatic to Demand Start.
+
+### 3. Current Service Configuration Verification
+
+The current service configuration was collected using the Windows CIM interface.
+
+**Observed configuration:**
+
+- **BITS**
+  - State: Running
+  - Startup mode: Automatic
+  - Service account: LocalSystem
+
+- **IsolationSession**
+  - State: Stopped
+  - Startup mode: Manual
+  - Service account: LocalSystem
+
+- **TrustedInstaller**
+  - State: Stopped
+  - Startup mode: Manual
+  - Service account: LocalSystem
+
+These values represent the configuration at the time of collection. They do not independently establish the service's historical state.
+
+### 4. Execution Process Correlation
+
+The Event 7040 XML contained an execution Process ID of 1276.
+
+A current process lookup identified PID 1276 as:
+
+- Process name: `services.exe`
+
+However, the process start-time field was unavailable during verification.
+
+Therefore, the current process lookup cannot conclusively establish the historical identity of PID 1276 at the time the event was generated.
+
+The event's LocalSystem security context also does not identify the specific application, component, or human responsible for initiating the configuration change.
+
+### 5. Forensic Assessment
+
+The collected records establish that multiple Windows services experienced startup-type changes during the examined period.
+
+Repeated service configuration changes can warrant investigation because service configuration is relevant to persistence and system administration. However, legitimate Windows servicing, updates, maintenance operations, and security software may also modify service startup settings.
+
+No malicious activity can be concluded from Event ID 7040 alone.
+
+The observed activity should therefore be treated as an investigative lead rather than a confirmed security incident.
+
+### 6. Investigation Limitations
+
+- The available event records do not independently identify the initiating application or human operator.
+- The current process lookup does not conclusively establish historical PID ownership.
+- Current service configurations may differ from their historical configurations.
+- The examined event records do not establish malicious intent.
+- Additional corroborating evidence would be required before attributing the changes to suspicious activity.
+
+### 7. Conclusion
+
+Windows Service Control Manager events were examined to identify and interpret service startup configuration changes.
+
+Event ID 7040 provided evidence of an IsolationSession startup-type modification from Automatic to Demand Start. Current service configuration and process information were also examined to add context.
+
+The investigation demonstrates how Windows System logs, CIM-based service inspection, and process correlation can be combined during endpoint forensic triage while maintaining appropriate evidentiary limitations.
+
+

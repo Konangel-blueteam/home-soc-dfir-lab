@@ -273,4 +273,86 @@ The missing historical event limits retrospective process-lineage verification. 
 - The Security log's retention configuration may contribute to missing historical records, but the precise cause remains unverified.
 
 
+## Windows Service Registry and DLL Verification
+
+### Objective
+
+Examine Windows service registry configurations and verify the configured service DLL associated with the Windows Update service.
+
+### 1. Registry Configuration Analysis
+
+The following Windows service registry keys were examined:
+
+- `HKLM\SYSTEM\CurrentControlSet\Services\WinDefend`
+- `HKLM\SYSTEM\CurrentControlSet\Services\wuauserv`
+
+**Microsoft Defender Antivirus (WinDefend)**
+
+- Startup configuration: Automatic (`2`)
+- Service type: Own Process (`16` / `0x10`)
+- Service account: LocalSystem
+- Configured executable: `MsMpEng.exe`
+
+**Windows Update (wuauserv)**
+
+- Startup configuration: Manual (`3`)
+- Service type: Share Process (`32` / `0x20`)
+- Service account: LocalSystem
+- Configured executable: `svchost.exe -k netsvcs -p`
+
+The registry values were consistent with the service properties previously collected through Windows CIM queries.
+
+### 2. Windows Update Service DLL Identification
+
+The following registry subkey was inspected:
+
+`HKLM\SYSTEM\CurrentControlSet\Services\wuauserv\Parameters`
+
+The configured `ServiceDll` was:
+
+`C:\Windows\System32\wuaueng.dll`
+
+This DLL is associated with the Windows Update service.
+
+### 3. Digital Signature Verification
+
+The DLL was examined using PowerShell Authenticode signature verification.
+
+- Signature status: Valid
+- Signer: Microsoft Windows
+- Publisher: Microsoft Corporation
+- Verification result: Signature verified
+
+The result supports the authenticity of the signed file. However, a valid signature alone does not establish that the host system is uncompromised or that the service is behaving benignly.
+
+### 4. SHA-256 Hash Calculation
+
+A SHA-256 hash was calculated to establish a file identification value.
+
+**File:** `wuaueng.dll`
+
+**Algorithm:** SHA-256
+
+**SHA-256:**
+```text
+68EB32EADA15FCC24FA9D06AD856DD40FC99D00FB1F2C2635D443F1EA885BE5E
+```
+
+The hash was recorded for identification and potential future comparison. It was not independently compared against a trusted reference.
+
+### 5. Forensic Assessment
+
+The inspected registry configuration matched the previously collected CIM service configuration.
+
+The Windows Update service was configured to use `wuaueng.dll`, and the DLL returned a valid Microsoft Windows digital signature.
+
+No suspicious configuration discrepancy was identified within the examined properties.
+
+### 6. Investigation Limitations
+
+- Registry configuration does not independently establish runtime behaviour.
+- A valid digital signature does not guarantee that a system is free from compromise.
+- The SHA-256 hash was calculated but not independently reputation-checked.
+- The investigation covered selected service properties and one configured service DLL; it does not represent a complete Windows persistence assessment.
+
 

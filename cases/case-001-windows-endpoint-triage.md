@@ -125,4 +125,89 @@ The available observations do not justify declaring a confirmed incident. Furthe
 **Outcome:** Controlled process-lineage validation completed with a documented limitation. No malicious activity was established by these events alone.
 
 
+## Windows Service Configuration and Executable Verification
+
+### Objective
+
+Inspect selected Windows services to understand their configuration, execution context, and executable authenticity indicators.
+
+### 1. Windows Update Service — `wuauserv`
+
+**Observed configuration:**
+- Service name: `wuauserv`
+- Status: Stopped
+- Startup type: Manual
+- Executable configuration: `svchost.exe -k netsvcs -p`
+
+**Forensic interpretation:**
+
+The service was stopped and configured for Manual startup at the time of inspection. This configuration alone does not indicate malicious activity.
+
+### 2. Microsoft Defender Antivirus Service — `WinDefend`
+
+**Observed configuration:**
+- Service name: `WinDefend`
+- Status: Running
+- Startup mode: Automatic
+- Service account: LocalSystem
+- Executable: `MsMpEng.exe`
+
+**Executable path:**
+
+```text
+C:\ProgramData\Microsoft\Windows Defender\Platform\4.18.26100.4-0\MsMpEng.exe
+```
+
+**Forensic interpretation:**
+
+The service was running under the highly privileged LocalSystem account. This is consistent with the requirements of a Windows security service. However, privileged execution alone does not establish whether a service is legitimate or malicious.
+
+### 3. Digital Signature Verification
+
+The executable's Properties window was inspected through the Digital Signatures tab.
+
+**Observed results:**
+- Signer: Microsoft Windows Publisher
+- Signature verification: This digital signature is OK
+
+**Forensic interpretation:**
+
+Windows reported the digital signature as valid. This supports the authenticity of the signed executable but does not independently establish that the process or the host system is free from compromise.
+
+### 4. SHA-256 Hash Calculation
+
+The executable's SHA-256 hash was calculated using PowerShell.
+
+**Command:**
+
+```powershell
+Get-FileHash "C:\ProgramData\Microsoft\Windows Defender\Platform\4.18.26100.4-0\MsMpEng.exe" -Algorithm SHA256
+```
+
+**Observed SHA-256:**
+
+```text
+0365D64D786E4C8EBB34C0F6FB017441B0A34C866D9E6E5673D00C5BFED56AFB
+```
+
+The hash provides a reproducible cryptographic fingerprint of the inspected file at the time of examination. It has not been independently compared against a trusted reference database.
+
+### 5. Forensic Assessment
+
+The observed service configuration, executable location, and successful digital signature verification are consistent with a legitimate Microsoft Defender installation.
+
+However, executable authenticity and runtime behaviour are separate investigative dimensions.
+
+A valid digital signature does not guarantee that a process is behaving benignly. Further investigation may be required if unusual process activity, unexpected network connections, or suspicious service configurations are identified.
+
+### 6. Investigation Limitations
+
+- The SHA-256 hash was calculated but not independently reputation-checked.
+- No network traffic analysis was performed as part of this exercise.
+- No conclusion regarding the overall security state of the host was established.
+- Findings represent observations from the inspected system at the time of examination.
+
+**Outcome:** Completed a practical examination of Windows service configuration, execution context, executable location, digital signature verification, and cryptographic hash calculation.
+
+
 

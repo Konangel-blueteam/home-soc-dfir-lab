@@ -210,4 +210,67 @@ A valid digital signature does not guarantee that a process is behaving benignly
 **Outcome:** Completed a practical examination of Windows service configuration, execution context, executable location, digital signature verification, and cryptographic hash calculation.
 
 
+## Windows Service-to-Process Correlation
+
+### Objective
+
+Correlate a Windows service with its associated runtime process and examine whether historical process creation records are available for verification.
+
+### Observations
+
+**Windows Update (`wuauserv`)**
+- Service state: Stopped
+- Process ID: 0
+- Configured executable: `C:\WINDOWS\system32\svchost.exe -k netsvcs -p`
+
+A Process ID of 0 was returned because the service was stopped during inspection. Its configured executable path does not establish that the process was running.
+
+**Microsoft Defender Antivirus (`WinDefend`)**
+- Service state: Running
+- Process ID: 5644
+- Runtime process: `MsMpEng.exe`
+- Parent Process ID reported by Windows: 1276
+- Parent process currently associated with PID 1276: `services.exe`
+- Process creation timestamp: 19 November 2026, 23:43:37
+
+The service PID and runtime process PID matched, supporting the correlation between `WinDefend` and `MsMpEng.exe`.
+
+The process executable path and `Get-Process` start time were not returned by the respective queries. However, CIM returned the process creation timestamp and parent PID.
+
+### Historical Event Correlation
+
+An attempt was made to locate Event ID 4688 for PID `0x160C` (decimal 5644) around the reported process creation time.
+
+No matching events were returned for the period 19 November 2026, 23:40–23:47.
+
+The oldest retained Event ID 4688 record identified during inspection was dated 24 November 2026, 19:29:23.
+
+### Security Log Configuration
+
+The Security log configuration was inspected using `wevtutil gl Security`.
+
+- Maximum log size: 20 MiB
+- Retention: Disabled (`false`)
+- Automatic backup: Disabled (`false`)
+- Logging: Enabled
+
+With retention disabled, older events may be overwritten when the configured log reaches capacity. This configuration is consistent with the absence of older records, but does not independently establish why the 19 November event is unavailable.
+
+### Forensic Assessment
+
+The investigation established a current service-to-process correlation for Microsoft Defender Antivirus.
+
+The reported parent PID is consistent with `services.exe` at the time of inspection, but the historical parent-child relationship has not been independently corroborated using a retained Event ID 4688 record.
+
+The missing historical event limits retrospective process-lineage verification. The available evidence does not establish malicious activity.
+
+### Limitations
+
+- Current PID associations do not independently prove historical process relationships.
+- Process IDs may be reused.
+- The process executable path was not returned by the process queries.
+- Historical Event ID 4688 coverage for 19 November could not be established.
+- The Security log's retention configuration may contribute to missing historical records, but the precise cause remains unverified.
+
+
 

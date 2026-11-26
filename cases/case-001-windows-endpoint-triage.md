@@ -633,3 +633,201 @@ The findings illustrate the importance of correlating task configuration with ex
 
 The task was assessed using the available evidence without treating unfamiliar configuration values, elevated run-level settings, or missing event records as proof of malicious activity.
 
+
+### Scheduled Task Analysis — MareBackup
+
+**Task Name:** `MareBackup`  
+**Task Path:** `\Microsoft\Windows\Application Experience\`  
+**State:** Ready  
+**Author:** Microsoft Corporation  
+**Description:** Gathers Win32 application data for App Backup scenario
+
+#### 1. Objective
+
+Examine the Windows scheduled task `MareBackup` to assess its configuration, executable actions, security principal, binary authenticity, and available execution-history evidence.
+
+#### 2. Task Actions
+
+The task contains three executable actions, all invoking:
+
+```text
+%windir%\system32\compattelrunner.exe
+```
+
+Configured arguments:
+
+**Action 1 — Software Inventory**
+```text
+-m:aeinv.dll -f:UpdateSoftwareInventoryW invsvc
+```
+
+**Action 2 — Application Assessment**
+```text
+-m:appraiser.dll -f:DoScheduledTelemetryRun
+```
+
+**Action 3 — App Backup**
+```text
+-m:aemarebackup.dll -f:BackupMareData
+```
+
+The action names are consistent with software inventory, application assessment, and App Backup-related operations. This interpretation is based on the configured module and function names.
+
+#### 3. Executable Verification
+
+**Executable:** `CompatTelRunner.exe`
+
+- Location: `C:\Windows\System32\CompatTelRunner.exe`
+- File version: `10.0.26100.1`
+- Company metadata: Microsoft Corporation
+- Authenticode status: Valid
+- Signer: Microsoft Windows
+
+**SHA-256:**
+```text
+B6E2C6F78E006CD6E93E35806E64A62C980B055A06023C9A76C12D6EC65E5208
+```
+
+The executable was located in the expected Windows System32 directory and its digital signature verified successfully.
+
+#### 4. DLL Verification
+
+Three referenced DLLs were examined independently.
+
+- `aeinv.dll`
+  - Version: `10.0.26100.9818`
+  - Company: Microsoft Corporation
+  - Signature: Valid
+  - Signer: Microsoft Windows
+
+- `appraiser.dll`
+  - Version: `10.0.26100.9549`
+  - Company: Microsoft Corporation
+  - Signature: Valid
+  - Signer: Microsoft Windows
+
+- `aemarebackup.dll`
+  - Version: `10.0.26100.1`
+  - Company: Microsoft Corporation
+  - Signature: Valid
+  - Signer: Microsoft Windows
+
+All three DLLs were found in the expected Windows System32 directory.
+
+#### 5. Security Principal
+
+The task XML identifies the configured principal as:
+
+```text
+UserId: S-1-5-18
+```
+
+This is the well-known SID for the LocalSystem account.
+
+Additional observed properties:
+
+- LogonType: ServiceAccount
+- RunLevel: Limited
+- ProcessTokenSidType: Default
+- RequiredPrivilege: Not specified
+
+The task is configured to execute under LocalSystem. The Limited run-level property does not mean that LocalSystem has ordinary user-level permissions.
+
+#### 6. Trigger and Execution Settings
+
+The exported task XML contained:
+
+```xml
+<Triggers />
+```
+
+No conventional triggers were configured in the exported task definition.
+
+Additional settings included:
+
+- MultipleInstancesPolicy: IgnoreNew
+- DisallowStartIfOnBatteries: True
+- StopIfGoingOnBatteries: True
+- UseUnifiedSchedulingEngine: True
+
+The absence of configured triggers does not establish that the task cannot be started manually or through another application or process.
+
+#### 7. Execution History
+
+Task Scheduler information returned:
+
+```text
+LastRunTime: 11/30/1999 12:00:00 AM
+LastTaskResult: 267011
+NextRunTime: Not available
+NumberOfMissedRuns: 0
+```
+
+The result code:
+
+```text
+267011 = 0x41303
+```
+
+`0x41303` corresponds to `SCHED_S_TASK_HAS_NOT_RUN`, indicating that Task Scheduler reports the task has not run.
+
+The 1999 timestamp is not treated as an actual execution timestamp.
+
+#### 8. Event Log Availability
+
+The following log was inspected:
+
+```text
+Microsoft-Windows-TaskScheduler/Operational
+```
+
+Observed configuration:
+
+- Enabled: False
+- Record count: Not available
+- Maximum size: 10 MiB
+
+Because the Operational log is currently disabled, task-specific historical execution records could not be examined through this channel.
+
+The historical date when logging was disabled is unknown.
+
+#### 9. Registration Metadata
+
+The scheduled-task CIM query returned a blank `Date` property.
+
+Therefore, a task registration timestamp could not be established from the examined metadata.
+
+File timestamps of the executable and DLLs were not substituted for the task registration date.
+
+#### 10. Forensic Assessment
+
+The examined configuration and binary metadata are consistent with a Windows Application Experience component.
+
+Supporting observations:
+
+- Microsoft Corporation attribution in task metadata.
+- Executable and DLLs located in the expected System32 directory.
+- Valid Microsoft Windows Authenticode signatures for all four examined binaries.
+- LocalSystem security principal.
+- Action names consistent with the task description and referenced modules.
+- No suspicious configuration discrepancy identified in the examined properties.
+
+**No malicious activity was established from the available evidence.**
+
+#### 11. Investigation Limitations
+
+- File hashes were not independently compared against a trusted Microsoft baseline.
+- Historical task execution events were unavailable because the Operational log is currently disabled.
+- The historical logging configuration is unknown.
+- The task registration timestamp was unavailable.
+- The absence of configured triggers does not exclude manual or externally initiated execution.
+- Digital signatures establish publisher authenticity, not the safety of every runtime operation.
+
+#### 12. Conclusion
+
+The `MareBackup` scheduled task exhibits configuration and binary provenance consistent with a Windows Application Experience component.
+
+Task Scheduler reports that the task has not run, and no conventional triggers are present in its exported XML definition.
+
+Based on the evidence examined, no malicious activity or suspicious configuration discrepancy was identified. The assessment remains limited by unavailable historical execution records and the absence of independent hash-baseline verification.
+

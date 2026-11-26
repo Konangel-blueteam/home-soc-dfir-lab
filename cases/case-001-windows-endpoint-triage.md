@@ -460,3 +460,176 @@ Event ID 7040 provided evidence of an IsolationSession startup-type modification
 The investigation demonstrates how Windows System logs, CIM-based service inspection, and process correlation can be combined during endpoint forensic triage while maintaining appropriate evidentiary limitations.
 
 
+## Windows Scheduled Task Forensics — SecurityScannerScheduler
+
+### Objective
+
+To examine a registered Windows scheduled task, investigate its execution configuration, verify the associated executable's digital signature, calculate its SHA-256 hash, and assess the available execution evidence.
+
+### 1. Scheduled Task Enumeration
+
+Windows Scheduled Tasks were enumerated using PowerShell's `Get-ScheduledTask` cmdlet.
+
+The enumeration identified tasks associated with Windows components and third-party applications, including Microsoft Office, Adobe, NVIDIA, OneDrive, Acer utilities, and McAfee.
+
+One task selected for further examination was:
+
+- **Task Name:** SecurityScannerScheduler
+- **Task Path:** Root (`\`)
+- **Recorded Author:** McAfee, LLC
+- **Description:** McAfee Security Scanner Scheduler
+- **State at collection:** Running
+
+The task metadata was consistent with a McAfee Security Scan component. Further verification was required before making an assessment.
+
+### 2. Task Action Analysis
+
+The registered task action was examined to identify the executable and any configured arguments.
+
+**Observed configuration:**
+
+- Executable: `SSScheduler.exe`
+- Installation directory: McAfee Security Scan
+- Version directory: `4.2.844`
+- Arguments: None recorded
+- Working directory: Not specified
+
+The executable was located under the McAfee Security Scan installation directory.
+
+The path was consistent with the recorded vendor metadata, but the path alone was not treated as proof of executable authenticity.
+
+### 3. Trigger Analysis
+
+The task contained an enabled logon trigger.
+
+**Observed properties:**
+
+- Trigger type: Logon
+- Enabled: True
+- Delay: Not specified
+- Start boundary: Not specified
+- End boundary: Not specified
+
+This indicates that the task is configured to trigger at user logon.
+
+The trigger configuration does not independently establish that the executable successfully ran at every logon.
+
+### 4. Digital Signature Verification
+
+The executable was examined using PowerShell's `Get-AuthenticodeSignature` cmdlet.
+
+**Verification results:**
+
+- Signature status: Valid
+- Status message: Signature verified
+- Signer: McAfee, LLC
+
+Windows successfully verified the executable's Authenticode signature.
+
+This supports the association of the signed executable with McAfee, LLC. However, a valid digital signature does not independently establish that the application is harmless or that its runtime behaviour is legitimate.
+
+### 5. SHA-256 Hash Calculation
+
+A SHA-256 cryptographic hash was calculated for the executable using PowerShell's `Get-FileHash` cmdlet.
+
+**Calculated SHA-256:**
+
+```text
+FEEB3CACDA3F3C85E24DBF2EB87F847FF63D0840364C8AE2BC8CBDE11C40D0A0
+```
+
+The hash represents the fingerprint of the file at the time of collection.
+
+It was not independently compared against a trusted vendor baseline or threat-intelligence source. Therefore, no known-good or malicious reputation verdict is assigned to this hash.
+
+### 6. Task Execution Information
+
+Task execution information was collected using `Get-ScheduledTaskInfo`.
+
+**Observed results:**
+
+- Last run time: 19 November 2026, 23:43:53
+- Last task result: `267009`
+- Hexadecimal result: `0x41301`
+- Next run time: Not available
+- Number of missed runs: 0
+
+The result code `0x41301` corresponds to `SCHED_S_TASK_RUNNING`, indicating that the task was reported as currently running when its information was collected.
+
+This is a running-state status, not a conventional successful-completion result.
+
+The reported last-run timestamp establishes that Task Scheduler recorded a run time. It does not, by itself, prove successful completion of the executable's activity.
+
+### 7. Task Scheduler Operational Log Examination
+
+The Task Scheduler Operational event log was queried for records mentioning `SecurityScannerScheduler` between:
+
+- Start: 19 November 2026, 23:40
+- End: 19 November 2026, 23:50
+
+No matching records were returned by the query.
+
+The Operational log configuration was subsequently inspected.
+
+**Observed configuration at the time of examination:**
+
+- Enabled: False
+- Retention: False
+- Maximum size: 10 MiB
+
+The Operational log was disabled when its configuration was inspected. Consequently, it could not provide execution-event corroboration during this investigation.
+
+The current configuration does not establish whether the log was enabled or disabled on 19 November 2026. The absence of matching events therefore cannot be used to conclude that the task did not execute.
+
+### 8. Security Principal Analysis
+
+The registered task principal was examined.
+
+**Observed properties:**
+
+- Run level: Highest
+- Logon type: Group
+- Group ID: Users
+- Process token SID type: Default
+- Explicit user ID: Not specified
+
+The task uses a group-based principal associated with the Windows Users group.
+
+The `Highest` run-level setting requests the highest run level available to the configured principal. It does not independently establish that the task runs as SYSTEM or has unrestricted administrator privileges.
+
+The logon trigger and the principal's logon type represent separate configuration properties and should not be treated as interchangeable.
+
+### 9. Forensic Assessment
+
+The examined task contained metadata identifying McAfee, LLC as its author and an executable located within the McAfee Security Scan installation directory.
+
+The executable's Authenticode signature was valid, and its SHA-256 fingerprint was successfully calculated.
+
+The task was configured with an enabled logon trigger and a group-based security principal associated with the Users group. Its configured run level was Highest.
+
+Task Scheduler reported a last-run timestamp and a result code indicating a running state. However, matching execution events were not available through the queried Operational log.
+
+The available findings are consistent with a McAfee Security Scan scheduled task, but they do not independently establish that all task activity was benign.
+
+No confirmed malicious activity was identified from the examined evidence.
+
+### 10. Investigation Limitations
+
+- The task's recorded author and executable directory do not independently establish authenticity.
+- A valid Authenticode signature does not guarantee harmless runtime behaviour.
+- The calculated SHA-256 hash was not independently checked against a trusted baseline.
+- The last-run timestamp and running-state result do not establish successful task completion.
+- No matching Task Scheduler Operational events were returned for the examined time window.
+- Operational logging was disabled at the time of configuration inspection; its historical state on the reported last-run date is unknown.
+- The available information does not establish the human operator responsible for the task's execution.
+
+### 11. Conclusion
+
+This investigation demonstrates a structured approach to Windows Scheduled Task Forensics using PowerShell.
+
+The examination covered task enumeration, executable and trigger inspection, Authenticode signature verification, SHA-256 hash calculation, execution metadata, event-log availability, and security principal analysis.
+
+The findings illustrate the importance of correlating task configuration with executable integrity and execution evidence while documenting the limitations of unavailable historical logs.
+
+The task was assessed using the available evidence without treating unfamiliar configuration values, elevated run-level settings, or missing event records as proof of malicious activity.
+
